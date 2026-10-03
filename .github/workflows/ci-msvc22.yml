@@ -1,0 +1,115 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+# GitHub Actions workflow file for CI
+# https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+
+name: CI MSVC 2022
+
+on:
+  push:
+    # Skip jobs when only documentation files are changed
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.rst'
+      - '!**.tex'
+      - '!**/analysis.yml'
+      - '!**/docs.yml'
+      - '!**.properties'
+      - '!docs/**'
+  pull_request:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.rst'
+      - '!**.tex'
+      - '!docs/**'
+  schedule:
+    # Full nightly build, for the main project repo (not for forks)
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    # This allows manual triggering of the workflow from the web
+
+permissions: read-all
+
+# Allow subsequent pushes to the same PR or REF to cancel any previous jobs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+
+  windows:
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
+    name: "${{matrix.desc}}"
+    uses: ./.github/workflows/build-steps.yml
+    with:
+      nametag: ${{ matrix.nametag || 'unnamed!' }}
+      runner: ${{ matrix.runner }}
+      container: ${{ matrix.container }}
+      cc_compiler: ${{ matrix.cc_compiler }}
+      cxx_compiler: ${{ matrix.cxx_compiler }}
+      cxx_std: ${{ matrix.cxx_std || '17' }}
+      batched: ${{ matrix.batched }}
+      build_type: ${{ matrix.build_type || 'Release' }}
+      depcmds: ${{ matrix.depcmds }}
+      extra_artifacts: ${{ matrix.extra_artifacts }}
+      fmt_ver: ${{ matrix.fmt_ver }}
+      fmt_commit: ${{ matrix.fmt_commit }}
+      llvm_action_ver: ${{ matrix.llvm_action_ver }}
+      opencolorio_ver: ${{ matrix.opencolorio_ver }}
+      openexr_ver: ${{ matrix.openexr_ver }}
+      openimageio_ver: ${{ matrix.openimageio_ver }}
+      pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
+      python_ver: ${{ matrix.python_ver }}
+      setenvs: ${{ matrix.setenvs }}
+      simd: ${{ matrix.simd }}
+      skip_build: ${{ matrix.skip_build }}
+      skip_tests: ${{ matrix.skip_tests }}
+      abi_check: ${{ matrix.abi_check }}
+      build_docs: ${{ matrix.build_docs }}
+      generator: ${{ matrix.generator }}
+      ctest_args: ${{ matrix.ctest_args }}
+      ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
+      coverage: ${{ matrix.coverage || 0 }}
+      sonar: ${{ matrix.sonar || 0 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          #
+          # Windows 2022 / MSVS 17 case is below. It's not working yet,
+          # work in progress.
+          #
+          - desc: Windows-2022 VS2022 llvm20 oiio3.1
+            runner: windows-2022
+            nametag: windows-2022
+            generator: "Visual Studio 17 2022"
+            python_ver: "3.12"
+            opencolorio_ver: v2.3.2
+            openexr_ver: v3.3.2
+            openimageio_ver: release
+            skip_tests: 1
+            setenvs: export OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
+                            PUGIXML_VERSION=v1.14
+                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+                            LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+                            OPENIMAGEIO_UNITY=0
+          #- desc: Windows-2025 VS2026
+          #  runner: windows-2025-vs2026
+          #  nametag: windows-2025-vs2026
+          #  generator: "Visual Studio 18 2026"
+          #  python_ver: "3.12"
+          #  opencolorio_ver: v2.5.1
+          #  openexr_ver: v3.4.5
+          #  openimageio_ver: release
+          #  skip_tests: 1
+          #  setenvs: export OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
+          #                  PUGIXML_VERSION=v1.16
+          #                  OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+          #                  LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+          #                  OPENIMAGEIO_UNITY=0
