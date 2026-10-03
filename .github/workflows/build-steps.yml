@@ -284,3 +284,10 @@ jobs:
             build/CMake*
             build/testsuite/*/*.*
             ${{ inputs.extra_artifacts }}
+      - name: Save Windows executable
+        #if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OSL_test_msvc_2022
+          path: "${{ github.workspace }}/dist/"
+          retention-days: 1 
